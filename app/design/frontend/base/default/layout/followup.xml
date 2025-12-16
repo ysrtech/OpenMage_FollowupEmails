@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<layout version="0.1.0">
-    <default>
-        <reference name="before_body_end">
-            <block type="followup/egoimmerce" name="egoimmerce" as="egoimmerce" template="followup/egoimmerce.phtml"/>
-        </reference>
-    </default>
-</layout>

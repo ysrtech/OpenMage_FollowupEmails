@@ -24,15 +24,13 @@ class YSRTech_Followup_Model_Email extends Mage_Core_Model_Email
             $mail->setBodyText($this->getBody());
         }
 
-
-        $transport = Mage::helper('followup')->getSmtpTransport($storeId);
-
         $mail->setFrom($this->getFromEmail(), $this->getFromName())
             ->addTo($this->getToEmail(), $this->getToName())
             ->setSubject($this->getSubject())
             ->setReplyTo($this->getSenderEmail(), $this->getSenderName());
 
-        $mail->send($transport);
+        // Use Magento's default transport
+        $mail->send();
 
         return $this;
     }

@@ -32,6 +32,10 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
     public function newOrderDocument($event)
     {
 
+        if (!Mage::helper('followup')->isFollowupAvailable()) {
+            return false;
+        }
+
         $document = $event->getEvent()->getDataObject();
 
         if ($document instanceof Mage_Sales_Model_Order_Invoice) {
@@ -62,6 +66,10 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
     public function changeStatus($event)
     {
 
+        if (!Mage::helper('followup')->isFollowupAvailable()) {
+            return false;
+        }
+
         $order = $event->getEvent()->getOrder();
         $newStatus = $order->getData('status');
         $olderStatus = $order->getOrigData('status');
@@ -86,6 +94,10 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
 
     public function newOrder($event)
     {
+
+        if (!Mage::helper('followup')->isFollowupAvailable()) {
+            return false;
+        }
 
         $order = $event->getEvent()->getOrder();
 
@@ -123,6 +135,10 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
      */
     public function processAbandonedCarts()
     {
+        if (!Mage::helper('followup')->isFollowupAvailable()) {
+            return false;
+        }
+
         $abandonedHours = Mage::getStoreConfig('followup/config/abandoned_cart_hours');
         if (!$abandonedHours) {
             $abandonedHours = 1; // Default 1 hour
@@ -301,6 +317,10 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
 
     public function send()
     {
+        if (!Mage::helper('followup')->isFollowupAvailable()) {
+            return false;
+        }
+
         $date = Mage::app()->getLocale()->date()->get(self::MYSQL_DATETIME);
 
         $notificationCollection = Mage::getModel('followup/events')->getCollection()

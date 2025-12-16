@@ -3,7 +3,7 @@
 class YSRTech_Followup_Helper_Data extends Mage_Core_Helper_Abstract
 {
 
-    const XML_PATH_ACTIVE = 'followup/config/analytics';
+    const XML_PATH_ACTIVE = 'followup/config/active';
 
     const TRANSACTIONAL_SERVER = 'smtp.example.com';
     const TRANSACTIONAL_PORT = 587;
@@ -51,20 +51,6 @@ class YSRTech_Followup_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         return false;
-    }
-
-    public function getSmtpTransport($storeId)
-    {
-
-        $config = array('auth' => self::TRANSACTIONAL_AUTH, 'port' => self::TRANSACTIONAL_PORT);
-
-        $config['ssl'] = self::TRANSACTIONAL_SSL;
-
-        $config['username'] = Mage::getStoreConfig('followup/transactional/username', $storeId);
-        $config['password'] = Mage::getStoreConfig('followup/transactional/password', $storeId);
-
-
-        return new Zend_Mail_Transport_Smtp(self::TRANSACTIONAL_SERVER, $config);
     }
 
     /**

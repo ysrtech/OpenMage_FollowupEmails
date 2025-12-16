@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<layout>
-    <adminhtml_followup_subscribers_grid>
-        <block type="core/text_list" name="root" output="toHtml">
-            <block type="followup/adminhtml_subscribers_grid" name="admin.subscribers.grid"/>
-        </block>
-    </adminhtml_followup_subscribers_grid>
-</layout>

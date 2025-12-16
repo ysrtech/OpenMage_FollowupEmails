@@ -54,8 +54,8 @@ class YSRTech_Followup_Model_Email_Template extends Mage_Core_Model_Email_Templa
         $mail->addHeader('X-Click-Tracking-Enabled', true);
 
         try {
-            $transport = Mage::helper('followup')->getSmtpTransport($storeId);
-            $mail->send($transport);
+            // Use Magento's default transport
+            $mail->send();
             $this->_mail = null;
         } catch (Exception $e) {
             $this->_mail = null;

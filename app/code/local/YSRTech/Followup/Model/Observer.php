@@ -3,22 +3,10 @@
 class YSRTech_Followup_Model_Observer
 {
 
+    // Auto-subscribe feature removed; method left intentionally blank to avoid legacy calls causing errors.
     public function addToAutoList($event)
     {
-
-        $order = $event->getEvent()->getOrder();
-
-        try {
-
-            if (!Mage::getStoreConfig('followup/config/auto')) {
-                return false;
-            }
-
-            Mage::getModel('newsletter/subscriber')->subscribe($order->getCustomerEmail());
-
-        } catch (Exception $e) {
-            Mage::logException($e);
-        }
+        return false;
     }
 
 }

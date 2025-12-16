@@ -369,7 +369,7 @@ Two cron jobs power the autoresponder system:
 ### How It Works
 
 1. **Event occurs** (order placed, cart abandoned, etc.)
-2. **Event logged** in `fidelitas_autoresponders_events` table
+2. **Event logged** in `followup_autoresponders_events` table
 3. **Send time calculated** (immediate or future)
 4. **Cron checks** every 5 minutes for emails to send
 5. **Email sent** via Magento's native email system
@@ -418,7 +418,7 @@ Settings:
 3. ✅ Active From/To dates don't block sending
 4. ✅ Store view is correct
 5. ✅ Magento cron is running
-6. ✅ Check logs: `var/log/exception.log` and `var/log/fidelitas.log`
+6. ✅ Check logs: `var/log/exception.log` and `var/log/followup.log`
 
 **Test Magento email:**
 ```
@@ -516,7 +516,7 @@ A: Yes! Access any property of order, quote, shipment, etc. objects.
 A: Autoresponder won't send. Check logs for errors.
 
 **Q: Can I test without real orders?**  
-A: Yes, create test orders or manually insert into `fidelitas_autoresponders_events` table.
+A: Yes, create test orders or manually insert into `followup_autoresponders_events` table.
 
 ---
 
@@ -525,25 +525,25 @@ A: Yes, create test orders or manually insert into `fidelitas_autoresponders_eve
 ### Logs
 - **Exception log:** `var/log/exception.log`
 - **System log:** `var/log/system.log`  
-- **Fidelitas log:** `var/log/fidelitas.log`
+- **Followup log:** `var/log/followup.log`
 
 ### Database Tables
-- **Autoresponders:** `fidelitas_autoresponders`
-- **Scheduled emails:** `fidelitas_autoresponders_events`
+- **Autoresponders:** `followup_autoresponders`
+- **Scheduled emails:** `followup_autoresponders_events`
 - **Quotes (carts):** `sales_flat_quote`
 
 ### Useful SQL Queries
 
 **View pending emails:**
 ```sql
-SELECT * FROM fidelitas_autoresponders_events 
+SELECT * FROM followup_autoresponders_events 
 WHERE sent = 0 
 ORDER BY send_at ASC;
 ```
 
 **View sent emails:**
 ```sql
-SELECT * FROM fidelitas_autoresponders_events 
+SELECT * FROM followup_autoresponders_events 
 WHERE sent = 1 
 ORDER BY sent_at DESC 
 LIMIT 20;
@@ -551,7 +551,7 @@ LIMIT 20;
 
 **View active autoresponders:**
 ```sql
-SELECT * FROM fidelitas_autoresponders 
+SELECT * FROM followup_autoresponders 
 WHERE active = 1;
 ```
 

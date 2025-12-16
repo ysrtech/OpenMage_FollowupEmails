@@ -6,16 +6,6 @@
         </YSRTech_Followup>
     </modules>
     <frontend>
-        <events>
-            <sales_order_save_commit_after>
-                <observers>
-                    <update_subscriber_auto>
-                        <class>followup/observer</class>
-                        <method>addToAutoList</method>
-                    </update_subscriber_auto>
-                </observers>
-            </sales_order_save_commit_after>
-        </events>
         <routers>
             <followup>
                 <use>standard</use>
@@ -209,7 +199,7 @@
     <default>
         <followup>
             <config>
-                <auto>0</auto>
+                <active>1</active>
                 <intercept_emails>0</intercept_emails>
                 <intercept_email_address></intercept_email_address>
                 <enable_tracking>1</enable_tracking>
