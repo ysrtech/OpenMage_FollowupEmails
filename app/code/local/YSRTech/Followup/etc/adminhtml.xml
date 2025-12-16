@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <menu>
+        <customer>
+            <children>
+                <followup translate="title" module="followup">
+                    <title>Email Followups</title>
+                    <sort_order>100</sort_order>
+                    <children>
+                        <autoresponders>
+                            <title>Email Followups</title>
+                            <sort_order>10</sort_order>
+                            <action>adminhtml/followup_autoresponders</action>
+                        </autoresponders>
+                        <events>
+                            <title>Followup Log</title>
+                            <sort_order>20</sort_order>
+                            <action>adminhtml/followup_events</action>
+                        </events>
+                    </children>
+                </followup>
+            </children>
+        </customer>
+    </menu>
+    <acl>
+        <resources>
+            <admin>
+                <children>
+                    <customer>
+                        <children>
+                            <followup translate="title" module="followup">
+                                <title>Email Followups</title>
+                                <sort_order>100</sort_order>
+                                <children>
+                                    <autoresponders>
+                                        <title>Email Followups</title>
+                                        <sort_order>10</sort_order>
+                                    </autoresponders>
+                                    <events>
+                                        <title>Followup Log</title>
+                                        <sort_order>20</sort_order>
+                                    </events>
+                                </children>
+                            </followup>
+                        </children>
+                    </customer>
+                </children>
+            </admin>
+        </resources>
+    </acl>
+</config>

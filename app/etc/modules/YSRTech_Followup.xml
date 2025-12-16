@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <YSRTech_Followup>
+            <active>true</active>
+            <codePool>local</codePool>
+        </YSRTech_Followup>
+    </modules>
+</config>
