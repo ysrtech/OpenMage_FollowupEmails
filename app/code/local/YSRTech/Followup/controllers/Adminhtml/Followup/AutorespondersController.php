@@ -190,6 +190,68 @@ class YSRTech_Followup_Adminhtml_Followup_AutorespondersController extends Mage_
         $this->_redirectReferer();
     }
 
+    /**
+     * Retroactive email processing - display form
+     */
+    public function retroactiveAction()
+    {
+        $this->_title($this->__('Email Autoresponders'))->_title($this->__('Send Retroactive Emails'));
+
+        $this->loadLayout();
+        $this->_setActiveMenu('followup/autoresponders');
+        $this->_addContent($this->getLayout()->createBlock('followup/adminhtml_autoresponders_retroactive'));
+        $this->renderLayout();
+    }
+
+    /**
+     * Process retroactive emails
+     */
+    public function processRetroactiveAction()
+    {
+        if (!$this->getRequest()->isPost()) {
+            $this->_redirect('*/*/retroactive');
+            return;
+        }
+
+        try {
+            $daysAgo = (int)$this->getRequest()->getPost('days_ago');
+            $autoresponder_id = (int)$this->getRequest()->getPost('autoresponder_id');
+
+            if ($daysAgo <= 0) {
+                throw new Mage_Core_Exception('Please specify a valid number of days (greater than 0)');
+            }
+
+            if (!$autoresponder_id) {
+                throw new Mage_Core_Exception('Please select an autoresponder');
+            }
+
+            $results = Mage::getModel('followup/autoresponders')
+                ->processRetroactiveEmails($autoresponder_id, $daysAgo);
+
+            if ($results['success']) {
+                $message = $this->__(
+                    'Processed %d items from %d days ago. Queued %d emails. Skipped %d (already processed). Errors: %d',
+                    $results['items_found'],
+                    $daysAgo,
+                    $results['emails_queued'],
+                    $results['skipped'],
+                    $results['errors']
+                );
+                $this->_getSession()->addSuccess($message);
+            } else {
+                $this->_getSession()->addError($this->__('Error: %s', $results['message']));
+            }
+
+        } catch (Mage_Core_Exception $e) {
+            $this->_getSession()->addError($e->getMessage());
+        } catch (Exception $e) {
+            $this->_getSession()->addError($this->__('An error occurred while processing retroactive emails.'));
+            Mage::logException($e);
+        }
+
+        $this->_redirect('*/*/retroactive');
+    }
+
     protected function _isAllowed()
     {
         return Mage::getSingleton('admin/session')->isAllowed('followup/autoresponders');

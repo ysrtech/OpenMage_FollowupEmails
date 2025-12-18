@@ -5,11 +5,22 @@ class YSRTech_Followup_Helper_Data extends Mage_Core_Helper_Abstract
 
     const XML_PATH_ACTIVE = 'followup/config/active';
 
-    const TRANSACTIONAL_SERVER = 'smtp.example.com';
-    const TRANSACTIONAL_PORT = 587;
-    const TRANSACTIONAL_AUTH = 'login';
-    const TRANSACTIONAL_SSL = 'TLS';
-
+    /**
+     * Check if Mailgun module is installed and enabled
+     *
+     * @param mixed $store
+     * @return bool
+     */
+    public function isMailgunActive($store = null)
+    {
+        // Check if module is installed
+        if (!Mage::getConfig()->getModuleConfig('FreeLunchLabs_MailGun')->is('active', 'true')) {
+            return false;
+        }
+        
+        // Check if Mailgun is enabled in configuration
+        return Mage::getStoreConfigFlag('mailgun/general/active', $store);
+    }
     /**
      *
      * @param mixed $store
@@ -22,37 +33,7 @@ class YSRTech_Followup_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
 
-    public function loadSubscriber()
-    {
-        $customerId = Mage::getSingleton('customer/session')->getCustomer()->getId();
-
-        if ($customerId) {
-            $uid = Mage::getModel('followup/subscribers')
-                ->getCollection()
-                ->addFieldToFilter('customer_id', $customerId)
-                ->getFirstItem();
-
-            if ($uid->getData('uid')) {
-                Mage::getSingleton('core/cookie')->set('followup-subscriber', $uid->getData('uid'), true);
-                return $uid;
-            }
-        }
-
-        $uid = Mage::getSingleton('core/cookie')->get('followup-subscriber');
-        if ($uid) {
-            $uid = Mage::getModel('followup/subscribers')
-                ->getCollection()
-                ->addFieldToFilter('uid', $uid)
-                ->getFirstItem();
-
-            if ($uid->getData('uid')) {
-                return $uid;
-            }
-        }
-
-        return false;
-    }
-
+   
     /**
      * Encrypt event ID for tracking URLs
      *
@@ -85,6 +66,11 @@ class YSRTech_Followup_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function injectEmailTracking($html, $eventId, $storeId)
     {
+        // Skip tracking if Mailgun module is active (it handles tracking)
+        if ($this->isMailgunActive($storeId)) {
+            return $html;
+        }
+
         // Check if tracking is enabled
         if (!Mage::getStoreConfigFlag('followup/config/enable_tracking', $storeId)) {
             return $html;

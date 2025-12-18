@@ -54,29 +54,31 @@ class YSRTech_Followup_Block_Adminhtml_Events_Grid extends Mage_Adminhtml_Block_
             'header' => $this->__('Customer Name'),
             'index'  => 'customer_name',
         ));
-        /*
-                $this->addColumn('customer_email', array(
-                    'header' => $this->__('Customer Email'),
-                    'index' => 'customer_email',
-                ));
-                */
 
-        $this->addColumn('cellphone', array(
-            'header' => $this->__('Cellphone'),
-            'index'  => 'cellphone',
+        $this->addColumn('customer_email', array(
+            'header' => $this->__('Customer Email'),
+            'index'  => 'customer_email',
         ));
 
-        $this->addColumn('message', array(
-            'header' => $this->__('Message'),
-            'index'  => 'message',
+        $this->addColumn('created_at', array(
+            'header' => $this->__('Created At'),
+            'index'  => 'created_at',
+            'type'   => 'datetime',
+            'width'  => '170px',
+        ));
+
+        $this->addColumn('send_at', array(
+            'header' => $this->__('Send At'),
+            'index'  => 'send_at',
+            'type'   => 'datetime',
+            'width'  => '170px',
         ));
 
         $this->addColumn('sent_at', array(
-            'header' => $this->__('Sent at'),
-            'align'  => 'left',
-            'width'  => '170px',
-            'type'   => 'datetime',
+            'header' => $this->__('Sent At'),
             'index'  => 'sent_at',
+            'type'   => 'datetime',
+            'width'  => '170px',
         ));
 
         $this->addColumn('sent', array(
@@ -87,6 +89,46 @@ class YSRTech_Followup_Block_Adminhtml_Events_Grid extends Mage_Adminhtml_Block_
             'type'    => 'options',
             'options' => array('0' => $this->__('No'), '1' => $this->__('Yes')),
         ));
+
+        $this->addColumn('cancelled', array(
+            'header'  => $this->__('Cancelled?'),
+            'align'   => 'left',
+            'width'   => '80px',
+            'index'   => 'cancelled',
+            'type'    => 'options',
+            'options' => array('0' => $this->__('No'), '1' => $this->__('Yes')),
+        ));
+
+        // Only show tracking columns if Mailgun is NOT active
+        if (!Mage::helper('followup')->isMailgunActive()) {
+            $this->addColumn('opened', array(
+                'header'  => $this->__('Opened?'),
+                'align'   => 'left',
+                'width'   => '80px',
+                'index'   => 'opened',
+                'type'    => 'options',
+                'options' => array('0' => $this->__('No'), '1' => $this->__('Yes')),
+            ));
+
+            $this->addColumn('clicked', array(
+                'header'  => $this->__('Clicked?'),
+                'align'   => 'left',
+                'width'   => '80px',
+                'index'   => 'clicked',
+                'type'    => 'options',
+                'options' => array('0' => $this->__('No'), '1' => $this->__('Yes')),
+            ));
+        } else {
+            // Show Mailgun tracking link column if Mailgun is active
+            $this->addColumn('mailgun_tracking', array(
+                'header'         => $this->__('Mailgun Tracking'),
+                'align'          => 'center',
+                'width'          => '100px',
+                'filter'         => false,
+                'sortable'       => false,
+                'frame_callback' => array($this, 'renderMailgunLink'),
+            ));
+        }
 
         $this->addExportType('*/*/exportCsv', $this->__('CSV'));
         $this->addExportType('*/*/exportXml', $this->__('Excel XML'));
@@ -117,6 +159,32 @@ class YSRTech_Followup_Block_Adminhtml_Events_Grid extends Mage_Adminhtml_Block_
         }
 
         return $this->__('No');
+    }
+
+    /**
+     * Render Mailgun tracking link
+     *
+     * @param Varien_Object $row
+     * @return string
+     */
+    public function renderMailgunLink($value, $row)
+    {
+        // Only show link if email was sent
+        if (!$row->getSent()) {
+            return $this->__('Not Sent');
+        }
+
+        // Check if we have a saved Mailgun email ID
+        $mailgunEmailId = $row->getMailgunEmailId();
+        
+        if ($mailgunEmailId) {
+            $url = Mage::helper('adminhtml')->getUrl('adminhtml/emailtracking/emaildetail', array(
+                'id' => $mailgunEmailId
+            ));
+            return '<a href="' . $url . '" target="_blank">' . $this->__('View Tracking') . '</a>';
+        }
+
+        return $this->__('N/A');
     }
 
 }

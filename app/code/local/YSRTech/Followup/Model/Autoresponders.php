@@ -144,11 +144,9 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
             $abandonedHours = 1; // Default 1 hour
         }
 
-        $from = new Zend_Date();
-        $from->subHour($abandonedHours + 24); // Check carts from last 24 hours + threshold
-
-        $to = new Zend_Date();
-        $to->subHour($abandonedHours); // Carts older than threshold
+        $currentTime = time();
+        $from = $currentTime - (($abandonedHours + 24) * 3600); // Check carts from last 24 hours + threshold
+        $to = $currentTime - ($abandonedHours * 3600); // Carts older than threshold
 
         // Get quotes that are abandoned
         $quotes = Mage::getResourceModel('sales/quote_collection')
@@ -157,8 +155,8 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
             ->addFieldToFilter('customer_email', array('notnull' => true))
             ->addFieldToFilter('customer_email', array('neq' => ''))
             ->addFieldToFilter('updated_at', array(
-                'from' => $from->toString('yyyy-MM-dd HH:mm:ss'),
-                'to' => $to->toString('yyyy-MM-dd HH:mm:ss')
+                'from' => gmdate('Y-m-d H:i:s', $from),
+                'to' => gmdate('Y-m-d H:i:s', $to)
             ));
 
         foreach ($quotes as $quote) {
@@ -195,24 +193,20 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
 
     public function calculateSendDate($autoresponder)
     {
-        if ($autoresponder->getSendMoment() == 'occurs') {
-            $date = Mage::app()->getLocale()->date()
-                ->get(self::MYSQL_DATETIME);
-        }
+        $timestamp = time();
 
         if ($autoresponder->getSendMoment() == 'after') {
-            $date = Mage::app()->getLocale()->date();
-
+            // Add delay in seconds
             if ($autoresponder->getAfterHours() > 0) {
-                $date->addHour($autoresponder->getAfterHours());
+                $timestamp += $autoresponder->getAfterHours() * 3600;
             }
             if ($autoresponder->getAfterDays() > 0) {
-                $date->addDay($autoresponder->getAfterDays());
+                $timestamp += $autoresponder->getAfterDays() * 86400;
             }
-            $date->get(self::MYSQL_DATETIME);
         }
 
-        return $date;
+        // Return UTC datetime string
+        return gmdate('Y-m-d H:i:s', $timestamp);
     }
     
     /**
@@ -224,36 +218,28 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
      */
     public function calculateSendDateForStep($autoresponder, $step)
     {
-        $date = Mage::app()->getLocale()->date();
-
-        if ($autoresponder->getSendMoment() == 'now') {
-            // Even if "now", apply the step delay
-            if (!empty($step['delay_hours'])) {
-                $date->addHour($step['delay_hours']);
-            }
-            if (!empty($step['delay_days'])) {
-                $date->addDay($step['delay_days']);
-            }
-        }
+        $timestamp = time();
 
         if ($autoresponder->getSendMoment() == 'after') {
             // Add base delay from autoresponder
             if ($autoresponder->getAfterHours() > 0) {
-                $date->addHour($autoresponder->getAfterHours());
+                $timestamp += $autoresponder->getAfterHours() * 3600;
             }
             if ($autoresponder->getAfterDays() > 0) {
-                $date->addDay($autoresponder->getAfterDays());
-            }
-            // Add step-specific delay
-            if (!empty($step['delay_hours'])) {
-                $date->addHour($step['delay_hours']);
-            }
-            if (!empty($step['delay_days'])) {
-                $date->addDay($step['delay_days']);
+                $timestamp += $autoresponder->getAfterDays() * 86400;
             }
         }
 
-        return $date->get(self::MYSQL_DATETIME);
+        // Add step-specific delay
+        if (!empty($step['delay_hours'])) {
+            $timestamp += $step['delay_hours'] * 3600;
+        }
+        if (!empty($step['delay_days'])) {
+            $timestamp += $step['delay_days'] * 86400;
+        }
+
+        // Return UTC datetime string
+        return gmdate('Y-m-d H:i:s', $timestamp);
     }
     
     /**
@@ -318,10 +304,11 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
     public function send()
     {
         if (!Mage::helper('followup')->isFollowupAvailable()) {
+
             return false;
         }
 
-        $date = Mage::app()->getLocale()->date()->get(self::MYSQL_DATETIME);
+        $date = gmdate('Y-m-d H:i:s');
 
         $notificationCollection = Mage::getModel('followup/events')->getCollection()
             ->addFieldToFilter('sent', 0)
@@ -338,13 +325,73 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
                 continue;
             }
 
+            // Register the event ID so observer can link Mailgun email to it
+            if (Mage::helper('followup')->isMailgunActive()) {
+                Mage::register('followup_current_event_id', $cron->getId());
+            }
+
             // Send via Magento's native email system
             $result = $this->_sendEmail($cron, $autoresponder);
 
             if ($result === true) {
-                $cron->setSent(1)->setSentAt($date)->save();
+                $cron->setSent(1)->setSentAt($date);
+                
+                // If Mailgun is active, retrieve the captured Mailgun email ID from registry
+                if (Mage::helper('followup')->isMailgunActive()) {
+                    $mailgunEmailId = Mage::registry('followup_mailgun_email_id_' . $cron->getId());
+                    if ($mailgunEmailId) {
+                        $cron->setMailgunEmailId($mailgunEmailId);
+                    }
+                    // Clean up registry
+                    Mage::unregister('followup_current_event_id');
+                    Mage::unregister('followup_mailgun_email_id_' . $cron->getId());
+                }
+                
+                $cron->save();
+            } else {
+                // Clean up registry on failure
+                if (Mage::helper('followup')->isMailgunActive()) {
+                    Mage::unregister('followup_current_event_id');
+                }
             }
         }
+    }
+
+    /**
+     * Cleanup sent email logs older than configured retention
+     */
+    public function cleanupLogs()
+    {
+        // Respect module toggle
+        if (!Mage::helper('followup')->isFollowupAvailable()) {
+            return false;
+        }
+
+        // Get retention days from config (default 60)
+        $days = (int) Mage::getStoreConfig('followup/config/log_retention_days');
+        if ($days <= 0) {
+            $days = 60;
+        }
+
+        // Compute cutoff date
+        $cutoff = gmdate('Y-m-d H:i:s', strtotime('-' . $days . ' days'));
+
+        // Delete sent events older than cutoff
+        $connection = Mage::getSingleton('core/resource')->getConnection('core_write');
+        $table = Mage::getSingleton('core/resource')->getTableName('followup/events');
+
+        try {
+            $connection->delete($table, array(
+                $connection->quoteInto('sent = ?', 1),
+                'sent_at IS NOT NULL',
+                $connection->quoteInto('sent_at <= ?', $cutoff),
+            ));
+        } catch (Exception $e) {
+            Mage::logException($e);
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -481,44 +528,22 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
                 $recipientName = 'Intercepted Email';
             }
             
-            // Send email using Magento's transactional email
+            // Send email using OpenMage's transactional email system
             $translate = Mage::getSingleton('core/translate');
             $translate->setTranslateInline(false);
 
             $emailTemplate = Mage::getModel('core/email_template')
                 ->setDesignConfig(array('area' => 'frontend', 'store' => $storeId));
             
-            // Load template to get HTML content for tracking injection
-            $emailTemplate->loadDefault($templateId);
-            if (!$emailTemplate->getId()) {
-                $emailTemplate->load($templateId);
-            }
-            
-            // Process template with variables
-            $emailTemplate->setTemplateFilter(Mage::getModel('core/email_template_filter'));
-            $processedTemplate = $emailTemplate->getProcessedTemplate($vars);
-            $processedSubject = $emailTemplate->getProcessedTemplateSubject($vars);
-            
-            // Inject tracking into HTML (pixel + link wrapping)
-            $processedTemplate = Mage::helper('followup')->injectEmailTracking(
-                $processedTemplate, 
-                $cron->getId(), 
+            // Send using OpenMage's sendTransactional method (uses proper mail transport)
+            $emailTemplate->sendTransactional(
+                $templateId,
+                $sender,
+                $recipientEmail,
+                $recipientName,
+                $vars,
                 $storeId
             );
-            
-            // Send the email
-            $mail = $emailTemplate->getMail();
-            $mail->addTo($recipientEmail, $recipientName);
-            $mail->setSubject($processedSubject);
-            $mail->setFrom($sender['email'], $sender['name']);
-            
-            if ($emailTemplate->isPlain()) {
-                $mail->setBodyText($processedTemplate);
-            } else {
-                $mail->setBodyHtml($processedTemplate);
-            }
-            
-            $mail->send();
 
             $translate->setTranslateInline(true);
 
@@ -530,7 +555,7 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
         }
     }
 
-    protected function _insertData($autoresponder, $number, $storeId, $customer, $dataObjectId = null)
+    protected function _insertData($autoresponder, $number, $storeId, $customer, $dataObjectId = null, $customSendAt = null)
     {
 
         $storeIds = explode(',', $autoresponder->getStoreIds());
@@ -540,19 +565,50 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
         }
 
         $data = array();
-        $data['send_at'] = $this->calculateSendDate($autoresponder);
+        $data['send_at'] = $customSendAt ? $customSendAt : $this->calculateSendDate($autoresponder);
         $data['autoresponder_id'] = $autoresponder->getId();
         $data['cellphone'] = $number;
         $data['customer_id'] = $customer->getId();
         $data['customer_name'] = $customer->getName();
         $data['customer_email'] = $customer->getEmail();
         $data['event'] = $autoresponder->getEvent();
-        $data['created_at'] = new Zend_Db_Expr('NOW()');
+        $data['created_at'] = gmdate('Y-m-d H:i:s');
         $data['sent'] = 0;
         $data['data_object_id'] = $dataObjectId;
 
         Mage::getModel('followup/events')->setData($data)->save();
         $autoresponder->setData('number_subscribers', $autoresponder->getData('number_subscribers') + 1)->save();
+    }
+    
+    /**
+     * Calculate send date for retroactive processing based on original event date
+     * 
+     * @param YSRTech_Followup_Model_Autoresponders $autoresponder
+     * @param string $eventDate Original event date (Y-m-d H:i:s format)
+     * @return string Send date in Y-m-d H:i:s format
+     */
+    protected function _calculateRetroactiveSendDate($autoresponder, $eventDate)
+    {
+        $timestamp = strtotime($eventDate);
+        
+        if ($autoresponder->getSendMoment() == 'after') {
+            // Add delay in seconds
+            if ($autoresponder->getAfterHours() > 0) {
+                $timestamp += $autoresponder->getAfterHours() * 3600;
+            }
+            if ($autoresponder->getAfterDays() > 0) {
+                $timestamp += $autoresponder->getAfterDays() * 86400;
+            }
+        }
+        
+        // If calculated date is in the past, send immediately
+        $now = time();
+        if ($timestamp < $now) {
+            $timestamp = $now;
+        }
+        
+        // Return UTC datetime string
+        return gmdate('Y-m-d H:i:s', $timestamp);
     }
 
     public function toFormValues()
@@ -572,7 +628,7 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
     protected function _getCollection($storeId)
     {
 
-        $date = Mage::app()->getLocale()->date()->get(self::MYSQL_DATE);
+        $date = gmdate('Y-m-d');
         //Version Compatability
         $return = $this->getCollection()
             ->addFieldToFilter('active', 1);
@@ -584,6 +640,317 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
 
 
         return $return;
+    }
+
+    /**
+     * Process events retroactively and queue follow-up emails based on autoresponder
+     * 
+     * @param int $autoresponder_id Autoresponder ID to use
+     * @param int $daysAgo Number of days in the past to look for events
+     * @return array Results with counts of processed items
+     */
+    public function processRetroactiveEmails($autoresponder_id, $daysAgo)
+    {
+        if (!Mage::helper('followup')->isFollowupAvailable()) {
+            return array('success' => false, 'message' => 'Follow-up module is not available');
+        }
+
+        $results = array(
+            'items_found' => 0,
+            'emails_queued' => 0,
+            'skipped' => 0,
+            'errors' => 0,
+            'success' => true
+        );
+
+        try {
+            // Load the autoresponder
+            $autoresponder = Mage::getModel('followup/autoresponders')->load($autoresponder_id);
+            if (!$autoresponder->getId()) {
+                return array('success' => false, 'message' => 'Invalid autoresponder');
+            }
+
+            $eventType = $autoresponder->getEvent();
+            
+            // Calculate date range
+            $targetDate = date('Y-m-d', strtotime("-{$daysAgo} days"));
+            $nextDay = date('Y-m-d', strtotime("-" . ($daysAgo - 1) . " days"));
+
+            // Process based on event type from autoresponder
+            switch ($eventType) {
+                case 'new_shipment':
+                    $results = $this->_processRetroactiveShipments($autoresponder, $targetDate, $nextDay);
+                    break;
+                    
+                case 'new_invoice':
+                    $results = $this->_processRetroactiveInvoices($autoresponder, $targetDate, $nextDay);
+                    break;
+                    
+                case 'new_creditmemo':
+                    $results = $this->_processRetroactiveCreditmemos($autoresponder, $targetDate, $nextDay);
+                    break;
+                    
+                case 'order_new':
+                case 'order_product':
+                    $results = $this->_processRetroactiveOrders($autoresponder, $targetDate, $nextDay);
+                    break;
+                    
+                case 'order_status':
+                    $results = $this->_processRetroactiveOrderStatus($autoresponder, $targetDate, $nextDay);
+                    break;
+                    
+                default:
+                    return array('success' => false, 'message' => 'Event type "' . $eventType . '" is not supported for retroactive processing');
+            }
+
+        } catch (Exception $e) {
+            Mage::logException($e);
+            $results['success'] = false;
+            $results['message'] = $e->getMessage();
+        }
+
+        return $results;
+    }
+
+    protected function _processRetroactiveShipments($autoresponder, $targetDate, $nextDay)
+    {
+        $results = array('items_found' => 0, 'emails_queued' => 0, 'skipped' => 0, 'errors' => 0, 'success' => true);
+        
+        $shipments = Mage::getModel('sales/order_shipment')->getCollection()
+            ->addAttributeToFilter('created_at', array(
+                'from' => $targetDate . ' 00:00:00',
+                'to' => $nextDay . ' 00:00:00'
+            ));
+
+        $results['items_found'] = $shipments->getSize();
+
+        foreach ($shipments as $shipment) {
+            try {
+                $order = $shipment->getOrder();
+                if (!$order || !$order->getId()) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                // Check if email already sent
+                if ($this->_checkIfAlreadyProcessed($autoresponder->getId(), $shipment->getId())) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                $customer = new Varien_Object;
+                $customer->setName($order->getCustomerName())
+                    ->setEmail($order->getCustomerEmail())
+                    ->setId($order->getCustomerId());
+
+                // Calculate send date from original shipment date
+                $sendAt = $this->_calculateRetroactiveSendDate($autoresponder, $shipment->getCreatedAt());
+                
+                $this->_insertData($autoresponder, null, $order->getStoreId(), $customer, $shipment->getId(), $sendAt);
+                $results['emails_queued']++;
+            } catch (Exception $e) {
+                Mage::logException($e);
+                $results['errors']++;
+            }
+        }
+        
+        return $results;
+    }
+
+    protected function _processRetroactiveInvoices($autoresponder, $targetDate, $nextDay)
+    {
+        $results = array('items_found' => 0, 'emails_queued' => 0, 'skipped' => 0, 'errors' => 0, 'success' => true);
+        
+        $invoices = Mage::getModel('sales/order_invoice')->getCollection()
+            ->addAttributeToFilter('created_at', array(
+                'from' => $targetDate . ' 00:00:00',
+                'to' => $nextDay . ' 00:00:00'
+            ));
+
+        $results['items_found'] = $invoices->getSize();
+
+        foreach ($invoices as $invoice) {
+            try {
+                $order = $invoice->getOrder();
+                if (!$order || !$order->getId()) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                if ($this->_checkIfAlreadyProcessed($autoresponder->getId(), $invoice->getId())) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                $customer = new Varien_Object;
+                $customer->setName($order->getCustomerName())
+                    ->setEmail($order->getCustomerEmail())
+                    ->setId($order->getCustomerId());
+
+                // Calculate send date from original invoice date
+                $sendAt = $this->_calculateRetroactiveSendDate($autoresponder, $invoice->getCreatedAt());
+                
+                $this->_insertData($autoresponder, null, $order->getStoreId(), $customer, $invoice->getId(), $sendAt);
+                $results['emails_queued']++;
+            } catch (Exception $e) {
+                Mage::logException($e);
+                $results['errors']++;
+            }
+        }
+        
+        return $results;
+    }
+
+    protected function _processRetroactiveCreditmemos($autoresponder, $targetDate, $nextDay)
+    {
+        $results = array('items_found' => 0, 'emails_queued' => 0, 'skipped' => 0, 'errors' => 0, 'success' => true);
+        
+        $creditmemos = Mage::getModel('sales/order_creditmemo')->getCollection()
+            ->addAttributeToFilter('created_at', array(
+                'from' => $targetDate . ' 00:00:00',
+                'to' => $nextDay . ' 00:00:00'
+            ));
+
+        $results['items_found'] = $creditmemos->getSize();
+
+        foreach ($creditmemos as $creditmemo) {
+            try {
+                $order = $creditmemo->getOrder();
+                if (!$order || !$order->getId()) {
+                    $results['skipped']++; 
+                    continue;
+                }
+
+                if ($this->_checkIfAlreadyProcessed($autoresponder->getId(), $creditmemo->getId())) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                $customer = new Varien_Object;
+                $customer->setName($order->getCustomerName())
+                    ->setEmail($order->getCustomerEmail())
+                    ->setId($order->getCustomerId());
+
+                // Calculate send date from original creditmemo date
+                $sendAt = $this->_calculateRetroactiveSendDate($autoresponder, $creditmemo->getCreatedAt());
+                
+                $this->_insertData($autoresponder, null, $order->getStoreId(), $customer, $creditmemo->getId(), $sendAt);
+                $results['emails_queued']++;
+            } catch (Exception $e) {
+                Mage::logException($e);
+                $results['errors']++;
+            }
+        }
+        
+        return $results;
+    }
+
+    protected function _processRetroactiveOrders($autoresponder, $targetDate, $nextDay)
+    {
+        $results = array('items_found' => 0, 'emails_queued' => 0, 'skipped' => 0, 'errors' => 0, 'success' => true);
+        
+        $orders = Mage::getModel('sales/order')->getCollection()
+            ->addAttributeToFilter('created_at', array(
+                'from' => $targetDate . ' 00:00:00',
+                'to' => $nextDay . ' 00:00:00'
+            ));
+
+        $results['items_found'] = $orders->getSize();
+
+        foreach ($orders as $order) {
+            try {
+                // For order_product, check if order contains the specific product
+                if ($autoresponder->getEvent() == 'order_product' && $autoresponder->getProduct()) {
+                    $items = $order->getAllItems();
+                    $hasProduct = false;
+                    foreach ($items as $item) {
+                        if ($item->getProductId() == $autoresponder->getProduct()) {
+                            $hasProduct = true;
+                            break;
+                        }
+                    }
+                    if (!$hasProduct) {
+                        $results['skipped']++;
+                        continue;
+                    }
+                }
+
+                if ($this->_checkIfAlreadyProcessed($autoresponder->getId(), $order->getId())) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                $customer = new Varien_Object;
+                $customer->setName($order->getCustomerName())
+                    ->setEmail($order->getCustomerEmail())
+                    ->setId($order->getCustomerId());
+
+                // Calculate send date from original order date
+                $sendAt = $this->_calculateRetroactiveSendDate($autoresponder, $order->getCreatedAt());
+                
+                $this->_insertData($autoresponder, null, $order->getStoreId(), $customer, $order->getId(), $sendAt);
+                $results['emails_queued']++;
+            } catch (Exception $e) {
+                Mage::logException($e);
+                $results['errors']++;
+            }
+        }
+        
+        return $results;
+    }
+
+    protected function _processRetroactiveOrderStatus($autoresponder, $targetDate, $nextDay)
+    {
+        $results = array('items_found' => 0, 'emails_queued' => 0, 'skipped' => 0, 'errors' => 0, 'success' => true);
+        
+        $targetStatus = $autoresponder->getOrderStatus();
+        if (!$targetStatus) {
+            return array('success' => false, 'message' => 'No order status specified in autoresponder');
+        }
+        
+        $orders = Mage::getModel('sales/order')->getCollection()
+            ->addAttributeToFilter('status', $targetStatus)
+            ->addAttributeToFilter('updated_at', array(
+                'from' => $targetDate . ' 00:00:00',
+                'to' => $nextDay . ' 00:00:00'
+            ));
+
+        $results['items_found'] = $orders->getSize();
+
+        foreach ($orders as $order) {
+            try {
+                if ($this->_checkIfAlreadyProcessed($autoresponder->getId(), $order->getId())) {
+                    $results['skipped']++;
+                    continue;
+                }
+
+                $customer = new Varien_Object;
+                $customer->setName($order->getCustomerName())
+                    ->setEmail($order->getCustomerEmail())
+                    ->setId($order->getCustomerId());
+
+                // Calculate send date from order status change date (updated_at)
+                $sendAt = $this->_calculateRetroactiveSendDate($autoresponder, $order->getUpdatedAt());
+                
+                $this->_insertData($autoresponder, null, $order->getStoreId(), $customer, $order->getId(), $sendAt);
+                $results['emails_queued']++;
+            } catch (Exception $e) {
+                Mage::logException($e);
+                $results['errors']++;
+            }
+        }
+        
+        return $results;
+    }
+
+    protected function _checkIfAlreadyProcessed($autoresponder_id, $dataObjectId)
+    {
+        $existingEvent = Mage::getModel('followup/events')->getCollection()
+            ->addFieldToFilter('autoresponder_id', $autoresponder_id)
+            ->addFieldToFilter('data_object_id', $dataObjectId)
+            ->getFirstItem();
+
+        return $existingEvent->getId() ? true : false;
     }
 
 }

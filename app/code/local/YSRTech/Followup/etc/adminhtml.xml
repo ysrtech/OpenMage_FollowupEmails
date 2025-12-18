@@ -13,10 +13,15 @@
                             <action>adminhtml/followup_autoresponders</action>
                         </autoresponders>
                         <events>
-                            <title>Followup Log</title>
+                            <title>Followups Queue</title>
                             <sort_order>20</sort_order>
                             <action>adminhtml/followup_events</action>
                         </events>
+                        <retroactive>
+                            <title>Send Retroactive Emails</title>
+                            <sort_order>30</sort_order>
+                            <action>adminhtml/followup_autoresponders/retroactive</action>
+                        </retroactive>
                     </children>
                 </followup>
             </children>
@@ -37,9 +42,13 @@
                                         <sort_order>10</sort_order>
                                     </autoresponders>
                                     <events>
-                                        <title>Followup Log</title>
+                                        <title>Followups Queue</title>
                                         <sort_order>20</sort_order>
                                     </events>
+                                    <retroactive>
+                                        <title>Send Retroactive Emails</title>
+                                        <sort_order>30</sort_order>
+                                    </retroactive>
                                 </children>
                             </followup>
                         </children>

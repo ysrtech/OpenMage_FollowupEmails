@@ -2,7 +2,7 @@
 <config>
     <modules>
         <YSRTech_Followup>
-            <version>2.9.0.0</version>
+            <version>2.9.1.0</version>
         </YSRTech_Followup>
     </modules>
     <frontend>
@@ -98,6 +98,14 @@
     </adminhtml>
     <global>
         <events>
+            <freelunchlabs_mailgun_email_save_after>
+                <observers>
+                    <followup_capture_mailgun_id>
+                        <class>followup/observer</class>
+                        <method>captureMailgunEmailId</method>
+                    </followup_capture_mailgun_id>
+                </observers>
+            </freelunchlabs_mailgun_email_save_after>
             <sales_order_place_after>
                 <observers>
                     <followup_update_autoresponders>
@@ -194,6 +202,14 @@
                     <model>followup/autoresponders::processAbandonedCarts</model>
                 </run>
             </followup_abandoned_carts>
+            <followup_cleanup_logs>
+                <schedule>
+                    <cron_expr>0 3 * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>followup/autoresponders::cleanupLogs</model>
+                </run>
+            </followup_cleanup_logs>
         </jobs>
     </crontab>
     <default>
@@ -203,6 +219,7 @@
                 <intercept_emails>0</intercept_emails>
                 <intercept_email_address></intercept_email_address>
                 <enable_tracking>1</enable_tracking>
+                <log_retention_days>60</log_retention_days>
             </config>
         </followup>
     </default>

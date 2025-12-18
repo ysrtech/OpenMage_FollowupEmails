@@ -17,7 +17,7 @@ Powerful scheduled email notifications using **Magento's native email system**. 
 - Upload files to your Magento installation
 - Clear Magento cache: `System > Cache Management > Flush Magento Cache`
 - Database upgrade runs automatically
-- Module version: **2.8.0.0**
+- Module version: **2.9.1.0**
 
 ### 2. Configure Settings
 **Path:** `System > Configuration > Email Autoresponders`
@@ -54,7 +54,7 @@ Click **Add New Autoresponder** and configure:
 - Trigger an event (place order, create shipment, etc.)
 - Wait up to 5 minutes for cron to run
 - Check your email inbox
-- View log at: `Email Autoresponders > Autoresponders Log`
+- View queue at: `Customer > Email Followups > Followups Queue`
 
 ---
 
@@ -359,6 +359,7 @@ Two cron jobs power the autoresponder system:
 |-----|----------|---------|
 | **Send Autoresponders** | Every 5 minutes (`*/5 * * * *`) | Sends scheduled emails |
 | **Check Abandoned Carts** | Every hour (`0 * * * *`) | Detects abandoned carts |
+| **Cleanup Logs** | Daily at 03:00 (`0 3 * * *`) | Deletes sent email logs older than retention |
 
 ### Email Timing
 
@@ -380,7 +381,7 @@ Two cron jobs power the autoresponder system:
 ## Administration
 
 ### View Scheduled Emails
-**Path:** `Email Autoresponders > Autoresponders Log`
+**Path:** `Customer > Email Followups > Followups Queue`
 
 See all:
 - Pending emails (waiting to be sent)
@@ -398,6 +399,21 @@ Grid shows:
 - Total emails sent
 - Active status
 - Active date range
+
+### Send Retroactive Emails
+**Path:** `Customer > Email Followups > Send Retroactive Emails`
+
+Use this tool to apply an existing autoresponder retroactively to past events:
+- Select an autoresponder (its event, template, and delays are used)
+- Enter `Days Ago` (e.g., 10)
+- Click "Process Retroactive Emails"
+- Emails are queued based on the original event date plus configured delays; if that time is already in the past, they are scheduled to send now.
+
+### Email Tracking and Mailgun Integration (optional)
+
+- If the `FreeLunchLabs_MailGun` module is enabled, sent follow-up emails store the Mailgun email ID and the Events grid shows a "View Tracking" link for each sent item.
+- If Mailgun is not enabled, you can still track opens/clicks by enabling `Enable Email Tracking` under `System > Configuration > Customer > Email Followups > Configuration`.
+- After enabling new integrations or updating the module, flush Magento caches.
 
 ### Configuration
 **Path:** `System > Configuration > Email Autoresponders`
@@ -671,5 +687,5 @@ Your Store Team</p>
 
 ---
 
-**Version**: 2.8.0.0  
+**Version**: 2.9.1.0  
 **Last Updated**: December 2025

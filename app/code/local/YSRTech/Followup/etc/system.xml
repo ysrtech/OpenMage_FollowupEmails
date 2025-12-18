@@ -71,6 +71,16 @@
                             <show_in_store>0</show_in_store>
                             <comment>Track email opens and clicks (uses tracking pixel and link wrapping)</comment>
                         </enable_tracking>
+                        <log_retention_days>
+                            <label>Email Log Retention (Days)</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>70</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <comment>Delete sent email logs older than this many days (default: 60)</comment>
+                            <validate>validate-number validate-greater-than-zero</validate>
+                        </log_retention_days>
                     </fields>
                 </config>
             </groups>

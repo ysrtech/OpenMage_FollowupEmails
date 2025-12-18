@@ -68,7 +68,7 @@ class YSRTech_Followup_CallbackController extends Mage_Core_Controller_Front_Act
                 $event = Mage::getModel('followup/events')->load($eventId);
                 
                 if ($event->getId() && !$event->getOpenedAt()) {
-                    $event->setOpenedAt(now())
+                    $event->setOpenedAt(gmdate('Y-m-d H:i:s'))
                         ->save();
                 }
             } catch (Exception $e) {
@@ -102,7 +102,7 @@ class YSRTech_Followup_CallbackController extends Mage_Core_Controller_Front_Act
                 
                 if ($event->getId()) {
                     if (!$event->getClickedAt()) {
-                        $event->setClickedAt(now());
+                        $event->setClickedAt(gmdate('Y-m-d H:i:s'));
                     }
                     $event->setClickCount($event->getClickCount() + 1)
                         ->save();
