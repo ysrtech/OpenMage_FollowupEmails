@@ -23,9 +23,9 @@ if (!$connection->tableColumnExists($installer->getTable('followup/autoresponder
 }
 
 // Add step_number column to events table to track which step of the chain this email is
-if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'step_number')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/events'), 'step_number')) {
     $connection->addColumn(
-        $installer->getTable('Followup/events'),
+        $installer->getTable('followup/events'),
         'step_number',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_INTEGER,
@@ -39,9 +39,9 @@ if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'st
 }
 
 // Add cancelled column to events table to mark emails that shouldn't be sent
-if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'cancelled')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/events'), 'cancelled')) {
     $connection->addColumn(
-        $installer->getTable('Followup/events'),
+        $installer->getTable('followup/events'),
         'cancelled',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_SMALLINT,
@@ -55,9 +55,9 @@ if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'ca
 }
 
 // Add tracking fields to events table
-if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'opened_at')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/events'), 'opened_at')) {
     $connection->addColumn(
-        $installer->getTable('Followup/events'),
+        $installer->getTable('followup/events'),
         'opened_at',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_TIMESTAMP,
@@ -68,9 +68,9 @@ if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'op
     );
 }
 
-if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'clicked_at')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/events'), 'clicked_at')) {
     $connection->addColumn(
-        $installer->getTable('Followup/events'),
+        $installer->getTable('followup/events'),
         'clicked_at',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_TIMESTAMP,
@@ -81,9 +81,9 @@ if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'cl
     );
 }
 
-if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'click_count')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/events'), 'click_count')) {
     $connection->addColumn(
-        $installer->getTable('Followup/events'),
+        $installer->getTable('followup/events'),
         'click_count',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_INTEGER,
@@ -96,9 +96,9 @@ if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'cl
     );
 }
 
-if (!$connection->tableColumnExists($installer->getTable('Followup/events'), 'converted_at')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/events'), 'converted_at')) {
     $connection->addColumn(
-        $installer->getTable('Followup/events'),
+        $installer->getTable('followup/events'),
         'converted_at',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_TIMESTAMP,
