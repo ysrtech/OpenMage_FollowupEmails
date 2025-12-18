@@ -436,6 +436,16 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
                 'customer_name' => $cron->getCustomerName(),
                 'customer_email' => $cron->getCustomerEmail(),
             );
+            $vars['order_id_encoded'] = '';
+            $vars['order_increment_id_encoded'] = '';
+
+            // Provide encoded buyer email for use in templates
+            // urlencode(base64_encode($buyerEmail)) equivalent
+            if ($cron->getCustomerEmail()) {
+                $vars['customer_email_encoded'] = urlencode(base64_encode($cron->getCustomerEmail()));
+            } else {
+                $vars['customer_email_encoded'] = '';
+            }
 
             // Add order-specific variables
             if ($cron->getDataObjectId()) {
@@ -500,6 +510,10 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
                 
                 if ($order && $order->getId()) {
                     $vars['order'] = $order;
+                    $vars['order_id_encoded'] = urlencode(base64_encode($order->getId()));
+                    if ($order->getIncrementId()) {
+                        $vars['order_increment_id_encoded'] = urlencode(base64_encode($order->getIncrementId()));
+                    }
                 }
             }
 
@@ -522,6 +536,11 @@ class YSRTech_Followup_Model_Autoresponders extends Mage_Core_Model_Abstract
                 $vars['original_recipient_email'] = $cron->getCustomerEmail();
                 $vars['original_recipient_name'] = $cron->getCustomerName();
                 $vars['intercepted'] = true;
+
+                // Also expose encoded original buyer email for templates
+                $vars['original_buyer_email_encoded'] = $vars['buyer_email_encoded'];
+                $vars['original_order_id_encoded'] = $vars['order_id_encoded'];
+                $vars['original_order_increment_id_encoded'] = $vars['order_increment_id_encoded'];
                 
                 // Override recipient
                 $recipientEmail = $interceptEmailAddress;

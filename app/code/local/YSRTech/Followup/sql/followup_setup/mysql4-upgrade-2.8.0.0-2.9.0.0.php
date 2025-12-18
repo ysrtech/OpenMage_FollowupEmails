@@ -9,9 +9,9 @@ $installer->startSetup();
 $connection = $installer->getConnection();
 
 // Add chain_steps column to autoresponders table to store email chain configuration
-if (!$connection->tableColumnExists($installer->getTable('Followup/autoresponders'), 'chain_steps')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/autoresponders'), 'chain_steps')) {
     $connection->addColumn(
-        $installer->getTable('Followup/autoresponders'),
+        $installer->getTable('followup/autoresponders'),
         'chain_steps',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_TEXT,

@@ -7,9 +7,9 @@ $installer->startSetup();
 $connection = $installer->getConnection();
 
 // Add email_template_id column to autoresponders table
-if (!$connection->tableColumnExists($installer->getTable('Followup/autoresponders'), 'email_template_id')) {
+if (!$connection->tableColumnExists($installer->getTable('followup/autoresponders'), 'email_template_id')) {
     $connection->addColumn(
-        $installer->getTable('Followup/autoresponders'),
+        $installer->getTable('followup/autoresponders'),
         'email_template_id',
         array(
             'type'     => Varien_Db_Ddl_Table::TYPE_INTEGER,
