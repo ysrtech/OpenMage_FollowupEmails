@@ -60,12 +60,12 @@ class YSRTech_Followup_Block_Adminhtml_Autoresponders_Retroactive_Form extends M
             'name' => 'days_ago',
             'required' => true,
             'class' => 'validate-greater-than-zero validate-digits',
-            'note' => Mage::helper('followup')->__('Number of days in the past to look for events (e.g., 10 for events from 10 days ago)')
+            'note' => Mage::helper('followup')->__('Whole days back from today. 1 = events from yesterday, 10 = events from exactly 10 days ago (00:00–23:59 UTC). Must be a positive integer.')
         ));
 
         $fieldset->addField('warning', 'note', array(
             'text' => '<strong style="color: #ff0000;">' . 
-                      Mage::helper('followup')->__('Warning: This will queue emails for ALL shipments from the specified date that have not already been processed. Please review your autoresponder settings before proceeding.') . 
+                      Mage::helper('followup')->__('Warning: This will queue emails for ALL matching events on that day (per the selected autoresponder) that have not already been queued. Send times use the autoresponder delay; if the time is already past, it will send as soon as cron runs. Review templates, delays, and filters before proceeding.') . 
                       '</strong>'
         ));
 
