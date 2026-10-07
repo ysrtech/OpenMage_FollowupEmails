@@ -252,7 +252,7 @@ class YSRTech_Followup_Adminhtml_Followup_AutorespondersController extends Mage_
         $this->_redirect('*/*/retroactive');
     }
 
-    protected function _isAllowed()
+    protected function _isAllowed(): bool
     {
         return Mage::getSingleton('admin/session')->isAllowed('followup/autoresponders');
     }
