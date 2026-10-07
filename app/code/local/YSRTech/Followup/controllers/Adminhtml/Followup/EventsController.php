@@ -62,7 +62,7 @@ class YSRTech_Followup_Adminhtml_Followup_EventsController extends Mage_Adminhtm
         $this->_prepareDownloadResponse($fileName, $content);
     }
 
-    protected function _isAllowed()
+    protected function _isAllowed(): bool
     {
         return Mage::getSingleton('admin/session')->isAllowed('followup/events');
     }
